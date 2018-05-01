@@ -2,19 +2,7 @@
 -export([
     default_options/0,
     get/1,
-    get/2,
-    get_package/1,
-    get_package/2,
-    get_release/2,
-    get_release/3,
-    get_user/1,
-    get_user/2,
-    search/1,
-    search/2,
-    search/3,
-    get_owners/1,
-    get_owners/2,
-    get_keys/1
+    get/2
 ]).
 
 -type options() :: [{client, hex_http:client()} | {uri, binary()}].
@@ -26,6 +14,40 @@
     {extra, binary()}
 ].
 
+-type resource() ::
+    {key, Name :: binary()} |
+    keys |
+    {package, Name :: binary()} |
+    {packages, search_params()} |
+    {release, PackageName :: binary(), Version :: binary()} |
+    {owner, PackageName :: binary(), Email :: binary()} |
+    {owners, PackageName :: binary()} |
+    {user, UsernameOrEmail :: binary()} |
+    term().
+
+%% @doc
+%% Gets resource.
+%%
+%% Examples:
+%%
+%% ```
+%%     {ok, Package} = hex_api:get({package, <<"ecto">>}),
+%%     Package. %%=> #{<<"name">> => <<"ecto">>, ...}
+%% '''
+-spec get(resource()) -> {ok, map() | [map()]} | {error, term()}.
+get(Resource) ->
+    get(Resource, []).
+
+%% @doc
+%% Gets resource.
+%%
+%% `Options` is merged with `default_options/0`.
+%%
+%% See `get/1' for examples.
+-spec get(resource(), options()) -> {ok, map() | [map()]} | {error, term()}.
+get(Resource, Options) ->
+    do_get(resource_uri(Resource), merge_with_default_options(Options)).
+
 %% @doc
 %% Default options used to interact with the API.
 %% @end
@@ -35,12 +57,22 @@ default_options() ->
     URI = <<"https://hex.pm/api">>,
     [{client, Client}, {uri, URI}].
 
--spec get(binary()) -> {ok, term()} | {error, term()}.
-get(Path) when is_binary(Path) ->
-    get(Path, default_options()).
+%%====================================================================
+%% Internal functions
+%%====================================================================
 
--spec get(binary(), options()) -> {ok, term()} | {error, term()}.
-get(Path, Options) when is_binary(Path) and is_list(Options) ->
+resource_uri({key, Name}) -> <<"/keys/", Name/binary>>;
+resource_uri(keys) -> <<"/keys">>;
+resource_uri({package, Name}) -> <<"/packages/", Name/binary>>;
+resource_uri({packages, Params}) ->
+    QueryString = encode_query_string(Params),
+    <<"/packages?", QueryString/binary>>;
+resource_uri({release, PackageName, Version}) -> <<"/packages/", PackageName/binary, "/releases/", Version/binary>>;
+resource_uri({owners, PackageName}) -> <<"/packages/", PackageName/binary, "/owners">>;
+resource_uri({owners, PackageName, Username}) -> <<"/packages/", PackageName/binary, "/owners/", Username/binary>>;
+resource_uri({user, Username}) -> <<"/users/", Username/binary>>.
+
+do_get(Path, Options) when is_binary(Path) and is_list(Options) ->
     Client = proplists:get_value(client, Options),
     URI = proplists:get_value(uri, Options),
     DefaultHeaders = make_headers(Options),
@@ -59,171 +91,6 @@ get(Path, Options) when is_binary(Path) and is_list(Options) ->
         Other ->
             Other
     end.
-
-%% @doc
-%% Gets package.
-%%
-%% Examples:
-%%
-%% ```
-%%     hex_api:get_package(<<"package">>).
-%%     %%=> {ok, #{
-%%     %%=>     <<"name">> => <<"package1">>,
-%%     %%=>     <<"meta">> => #{
-%%     %%=>         <<"description">> => ...,
-%%     %%=>         <<"licenses">> => ...,
-%%     %%=>         <<"links">> => ...,
-%%     %%=>         <<"maintainers">> => ...
-%%     %%=>     },
-%%     %%=>     ...,
-%%     %%=>     <<"releases">> => [
-%%     %%=>         #{<<"url">> => ..., <<"version">> => <<"0.5.0">>}],
-%%     %%=>         #{<<"url">> => ..., <<"version">> => <<"1.0.0">>}],
-%%     %%=>         ...
-%%     %%=>     ]}}
-%% '''
-%% @end
--spec get_package(binary()) -> {ok, map()} | {error, term()}.
-get_package(Name) when is_binary(Name) ->
-    get_package(Name, []).
-
-%% @doc
-%% Gets package.
-%%
-%% `Options` is merged with `default_options/0`.
-%%
-%% See `get_package/1' for examples.
--spec get_package(binary(), options()) -> {ok, map()} | {error, term()}.
-get_package(Name, Options) when is_binary(Name) and is_list(Options) ->
-    get(<<"/packages/", Name/binary>>, merge_with_default_options(Options)).
-
-%% @doc
-%% Gets package release.
-%%
-%% Examples:
-%%
-%% ```
-%%     hex_api:get_release(<<"package">>, <<"1.0.0">>).
-%%     %%=> {ok, #{
-%%     %%=>     <<"version">> => <<"1.0.0">>,
-%%     %%=>     <<"meta">> => #{
-%%     %%=>         <<"description">> => ...,
-%%     %%=>         <<"licenses">> => ...,
-%%     %%=>         <<"links">> => ...,
-%%     %%=>         <<"maintainers">> => ...
-%%     %%=>     },
-%%     %%=>     ...}}
-%% '''
-%% @end
--spec get_release(binary(), binary()) -> {ok, map()} | {error, term()}.
-get_release(Name, Version) when is_binary(Name) and is_binary(Version) ->
-    get_release(Name, Version, []).
-
--spec get_release(binary(), binary(), options()) -> {ok, map()} | {error, term()}.
-get_release(Name, Version, Options) when is_binary(Name) and is_binary(Version) and is_list(Options) ->
-    get(<<"/packages/", Name/binary, "/releases/", Version/binary>>, merge_with_default_options(Options)).
-
-%% @doc
-%% Gets user.
-%%
-%% Examples:
-%%
-%% ```
-%%     hex_api:get_user(<<"user">>).
-%%     %%=> {ok, #{
-%%     %%=>     <<"username">> => <<"user">>,
-%%     %%=>     <<"packages">> => [
-%%     %%=>         #{
-%%     %%=>             <<"name">> => ...,
-%%     %%=>             <<"url">> => ...,
-%%     %%=>             ...
-%%     %%=>         },
-%%     %%=>         ...
-%%     %%=>     ],
-%%     %%=>     ...}}
-%% '''
-%% @end
--spec get_user(binary()) -> {ok, map()} | {error, term()}.
-get_user(Username) when is_binary(Username) ->
-    get_user(Username, []).
-
-%% @doc
-%% Gets user.
-%%
-%% `Options` is merged with `default_options/0`.
-%%
-%% See `get_user/1' for examples.
--spec get_user(binary(), options()) -> {ok, map()} | {error, term()}.
-get_user(Username, Options) when is_binary(Username) and is_list(Options) ->
-    get(<<"/users/", Username/binary>>, merge_with_default_options(Options)).
-
-%% @doc
-%% Searches packages.
-%%
-%% Examples:
-%%
-%% ```
-%%     hex_api:search(<<"package">>).
-%%     %%=> {ok, [
-%%     %%=>     #{<<"name">> => <<"package1">>, ...},
-%%     %%=>     ...
-%%     %%=> ]}
-%% '''
--spec search(binary()) -> {ok, [map()]} | {error, term()}.
-search(Query) when is_binary(Query) ->
-    search(Query, #{}, []).
-
-%% @doc
-%% Searches packages.
-%%
-%% `Options` is merged with `default_options/0`.
-%%
-%% See `search/2' for examples.
--spec search(binary(), search_params()) -> {ok, [map()]} | {error, term()}.
-search(Query, SearchParams) when is_binary(Query) and is_list(SearchParams) ->
-    search(Query, SearchParams, []).
-
-%% @doc
-%% Searches packages.
-%%
-%% `Options` is merged with `default_options/0`.
-%%
-%% See `search/2' for examples.
--spec search(binary(), search_params(), options()) -> {ok, [map()]} | {error, term()}.
-search(Query, SearchParams, Options) when is_binary(Query) and is_list(SearchParams) and is_list(Options) ->
-    QueryString = encode_query_string([{search, Query} | SearchParams]),
-    get(<<"/packages?", QueryString/binary>>, merge_with_default_options(Options)).
-
-%% Examples:
-%%
-%% ```
-%%     hex_api:get_owners(<<"package">>).
-%%     %%=> {ok, [
-%%     %%=>     #{<<"username">> => <<"alice">>, ...},
-%%     %%=>     ...
-%%     %%=> ]}
-%% '''
--spec get_owners(binary()) -> {ok, [map()]} | {error, term()}.
-get_owners(Name) when is_binary(Name) ->
-    get_owners(Name, []).
-
-%% @doc
-%% Gets package owners.
-%%
-%% `Options` is merged with `default_options/0`.
-%%
-%% See `get_owners/2' for examples.
--spec get_owners(binary(), options()) -> {ok, [map()]} | {error, term()}.
-get_owners(Name, Options) when is_binary(Name) and is_list(Options) ->
-    get(<<"/packages/", Name/binary, "/owners">>, merge_with_default_options(Options)).
-
--spec get_keys(options()) -> {ok, [map()]} | {error, term()}.
-get_keys(Options) when is_list(Options) ->
-    get(<<"/keys">>, merge_with_default_options(Options)).
-
-%%====================================================================
-%% Internal functions
-%%====================================================================
 
 encode_query_string(List) ->
     QueryString =
