@@ -130,5 +130,13 @@ fixture(<<?TEST_API_URI, "/packages/decimal/owners", _/binary>>, #{<<"authorizat
 fixture(<<?TEST_API_URI, "/packages/decimal/owners", _/binary>>, _) ->
     {ok, {401, [], <<"">>}};
 
+fixture(<<?TEST_API_URI, "/keys", _/binary>>, #{<<"authorization">> := Token}) when is_binary(Token) ->
+    Payload = [
+        #{
+            <<"name">> => <<"some-key">>
+        }
+    ],
+    {ok, {200, [], term_to_binary(Payload)}};
+
 fixture(URI, _) ->
     error({no_fixture, URI}).

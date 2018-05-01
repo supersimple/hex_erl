@@ -13,7 +13,8 @@
     search/2,
     search/3,
     get_owners/1,
-    get_owners/2
+    get_owners/2,
+    get_keys/1
 ]).
 
 -type options() :: [{client, hex_http:client()} | {uri, binary()}].
@@ -215,6 +216,10 @@ get_owners(Name) when is_binary(Name) ->
 -spec get_owners(binary(), options()) -> {ok, [map()]} | {error, term()}.
 get_owners(Name, Options) when is_binary(Name) and is_list(Options) ->
     get(<<"/packages/", Name/binary, "/owners">>, merge_with_default_options(Options)).
+
+-spec get_keys(options()) -> {ok, [map()]} | {error, term()}.
+get_keys(Options) when is_list(Options) ->
+    get(<<"/keys">>, merge_with_default_options(Options)).
 
 %%====================================================================
 %% Internal functions
