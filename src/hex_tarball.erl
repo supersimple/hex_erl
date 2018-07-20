@@ -44,9 +44,15 @@
 -spec create(metadata(), files()) -> {ok, {tarball(), checksum()}}.
 create(Metadata, Files) ->
     MetadataBinary = encode_metadata(Metadata),
+<<<<<<< HEAD
     ContentsTarball = create_memory_tarball(Files),
     ContentsTarballCompressed = gzip(ContentsTarball),
     Checksum = checksum(?VERSION, MetadataBinary, ContentsTarballCompressed),
+=======
+    ContentsBinaryBuild = build_tarball(Files),
+    ContentsBinary = compress_tarball(ContentsBinaryBuild),
+    Checksum = checksum(?VERSION, MetadataBinary, ContentsBinary),
+>>>>>>> Check package tarball size
     ChecksumBase16 = encode_base16(Checksum),
 
     OuterFiles = [
@@ -56,9 +62,15 @@ create(Metadata, Files) ->
        {"contents.tar.gz", ContentsTarballCompressed}
     ],
 
+<<<<<<< HEAD
     Tarball = create_memory_tarball(OuterFiles),
 
     UncompressedSize = byte_size(ContentsTarball),
+=======
+    Tarball = build_tarball(OuterFiles),
+
+    UncompressedSize = byte_size(Tarball) - byte_size(ContentsBinary) + byte_size(ContentsBinaryBuild),
+>>>>>>> Check package tarball size
 
     case(byte_size(Tarball) > ?TARBALL_MAX_SIZE) or (UncompressedSize > ?TARBALL_MAX_UNCOMPRESSED_SIZE) of
         true ->
@@ -321,6 +333,15 @@ try_updating_mtime(Path) ->
     _ = file:write_file_info(Path, #file_info{mtime=Time}, [{time, universal}]),
     ok.
 
+<<<<<<< HEAD
+=======
+build_tarball(Files) ->
+    create_memory_tarball(Files).
+
+compress_tarball(Tarball) ->
+    gzip(Tarball).
+
+>>>>>>> Check package tarball size
 create_memory_tarball(Files) ->
     {ok, Fd} = file:open([], [ram, read, write, binary]),
     {ok, Tar} = hex_erl_tar:init(Fd, write, fun file_op/2),
