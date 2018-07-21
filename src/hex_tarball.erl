@@ -45,6 +45,7 @@
 create(Metadata, Files) ->
     MetadataBinary = encode_metadata(Metadata),
 <<<<<<< HEAD
+<<<<<<< HEAD
     ContentsTarball = create_memory_tarball(Files),
     ContentsTarballCompressed = gzip(ContentsTarball),
     Checksum = checksum(?VERSION, MetadataBinary, ContentsTarballCompressed),
@@ -53,6 +54,11 @@ create(Metadata, Files) ->
     ContentsBinary = compress_tarball(ContentsBinaryBuild),
     Checksum = checksum(?VERSION, MetadataBinary, ContentsBinary),
 >>>>>>> Check package tarball size
+=======
+    ContentsTarball = create_memory_tarball(Files),
+    ContentsTarballCompressed = gzip(ContentsTarball),
+    Checksum = checksum(?VERSION, MetadataBinary, ContentsTarballCompressed),
+>>>>>>> Refactoring based on PR feedback
     ChecksumBase16 = encode_base16(Checksum),
 
     OuterFiles = [
@@ -63,6 +69,7 @@ create(Metadata, Files) ->
     ],
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     Tarball = create_memory_tarball(OuterFiles),
 
     UncompressedSize = byte_size(ContentsTarball),
@@ -71,6 +78,11 @@ create(Metadata, Files) ->
 
     UncompressedSize = byte_size(Tarball) - byte_size(ContentsBinary) + byte_size(ContentsBinaryBuild),
 >>>>>>> Check package tarball size
+=======
+    Tarball = create_memory_tarball(OuterFiles),
+
+    UncompressedSize = byte_size(ContentsTarball),
+>>>>>>> Refactoring based on PR feedback
 
     case(byte_size(Tarball) > ?TARBALL_MAX_SIZE) or (UncompressedSize > ?TARBALL_MAX_UNCOMPRESSED_SIZE) of
         true ->
@@ -334,6 +346,7 @@ try_updating_mtime(Path) ->
     ok.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 build_tarball(Files) ->
     create_memory_tarball(Files).
@@ -342,6 +355,8 @@ compress_tarball(Tarball) ->
     gzip(Tarball).
 
 >>>>>>> Check package tarball size
+=======
+>>>>>>> Refactoring based on PR feedback
 create_memory_tarball(Files) ->
     {ok, Fd} = file:open([], [ram, read, write, binary]),
     {ok, Tar} = hex_erl_tar:init(Fd, write, fun file_op/2),
