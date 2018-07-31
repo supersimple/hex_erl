@@ -1,5 +1,5 @@
 -module(hex_tarball).
--export([create/2, unpack/2, format_checksum/1, format_error/1]).
+-export([create/2, create_docs/1, unpack/2, format_checksum/1, format_error/1]).
 -ifdef(TEST).
 -export([do_decode_metadata/1, gzip/1, normalize_requirements/1]).
 -endif.
@@ -85,6 +85,39 @@ create(Metadata, Files) ->
 >>>>>>> Refactoring based on PR feedback
 
     case(byte_size(Tarball) > ?TARBALL_MAX_SIZE) or (UncompressedSize > ?TARBALL_MAX_UNCOMPRESSED_SIZE) of
+        true ->
+            {error, {tarball, too_big}};
+
+        false ->
+            {ok, {Tarball, Checksum}}
+    end.
+
+%%====================================================================
+%% API functions
+%%====================================================================
+
+%% @doc
+%% Creates a documents tarball.
+%%
+%% Examples:
+%%
+%% ```
+%%     Files = [{"src/foo.erl", <<"-module(foo).">>}],
+%%     {ok, {Tarball, Checksum}} = hex_tarball:create_docs(Files).
+%%     Tarball.
+%%     %%=> <<86,69,...>>
+%%     Checksum.
+%%     %%=> <<40,32,...>>
+%% '''
+%% @end
+-spec create_docs(files()) -> {ok, {tarball(), checksum()}}.
+create_docs(Files) ->
+    Tarball = create_memory_tarball(Files),
+    TarballCompressed = gzip(Tarball),
+    Checksum = checksum(TarballCompressed),
+    UncompressedSize = byte_size(Tarball),
+
+    case(byte_size(TarballCompressed) > ?TARBALL_MAX_SIZE) or (UncompressedSize > ?TARBALL_MAX_UNCOMPRESSED_SIZE) of
         true ->
             {error, {tarball, too_big}};
 
